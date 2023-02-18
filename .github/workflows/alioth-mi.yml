@@ -17,89 +17,84 @@ jobs:
         repository: LeviMarvin/kernel_xiaomi_alioth
         ref: talon
         path: android-kernel
-      
+
+    - name: Setup Environment
+      run: |
+        LOCAL_DIR=`pwd`
+
+        echo "LOCAL_DIR=${LOCAL_DIR}" >> $GITHUB_ENV
+        echo "CLANG_DIR=${LOCAL_DIR}/clang" >> $GITHUB_ENV
+        echo "KERNEL_DIR=${LOCAL_DIR}/android-kernel" >> $GITHUB_ENV
+				echo "ZIMAGE_DIR=${KERNEL_DIR}/out/arch/arm64/boot" >> $GITHUB_ENV
+
+
+    - name: Setup KernelSU
+      run: |
+        cd ${{ env.KERNEL_DIR }}
+        curl -LSs "https://raw.githubusercontent.com/tiann/KernelSU/main/kernel/setup.sh" | bash -
+        wget -q "https://raw.githubusercontent.com/CapShift/alioth_ksu_daily/main/0001-Add-KernelSU-calls-to-the-kernel-source.patch" -O KernelSU.patch
+        git apply KernelSU.patch
+				KSU_VERSION=$((10000+200+`git rev-list --count HEAD`))
+				echo "KSU_VERSION=${KSU_VERSION}" >> $GITHUB_ENV
+        cd ${{ env.LOCAL_DIR }}
+
+
     - name: Setup Build Environment
       run: |
         sudo apt-get update
         sudo apt-get install git-core gnupg flex bison build-essential zip curl zlib1g-dev gcc-multilib g++-multilib libc6-dev-i386 libncurses5 lib32ncurses5-dev x11proto-core-dev libx11-dev lib32z1-dev libgl1-mesa-dev libxml2-utils xsltproc unzip fontconfig python-is-python3 python2 cpio p7zip-full
-    
+
+
     - name: Download Clang Toolchain
       run: |
-        mkdir clang
-        cd clang
+        [[ -d ${{ env.CLANG_DIR }} ]] || mkdir ${{ env.CLANG_DIR }}
+        cd ${{ env.CLANG_DIR }}
         wget -q https://github.com/Mandi-Sa/clang/releases/download/amd64-kernel-arm-20230213/amd64-kernel-arm-20230213.7z -O clang.7z
-        7za x clang.7z
-        CLANG_DIR=`pwd`
-        echo "CLANG_DIR=$CLANG_DIR" >> $GITHUB_ENV
-      
-    - name: Setup KernelSU
-      run: |
-        cd android-kernel
-        curl -LSs "https://raw.githubusercontent.com/tiann/KernelSU/main/kernel/setup.sh" | bash -
-        wget -q "https://raw.githubusercontent.com/CapShift/alioth_ksu_daily/main/0001-Add-KernelSU-calls-to-the-kernel-source.patch" -O KernelSU.patch
-        git apply ./KernelSU.patch
-    
+        7za x clang.7z && rm -rf clang.7z
+				cd ${{ env.LOCAL_DIR }}
+
+
     - name: Generate Kernel Configuration
-      run: |
-        cd android-kernel
+      run: | 
         PATH=${{ env.CLANG_DIR }}/bin:$PATH
-        DEVICE_NAME=Alioth
-        KERNEL_DEFCONFIG=alioth_lmperf_defconfig
-        KERNEL_DIR=`pwd`
-        echo "KERNEL_DIR=${KERNEL_DIR}" >> $GITHUB_ENV
-        echo "ZIMAGE_DIR="${KERNEL_DIR}/out/arch/arm64/boot"" >> $GITHUB_ENV
         ARCH=arm64
         SUBARCH=arm64
+				KERNEL_DEFCONFIG=alioth_lmperf_defconfig
+
         KBUILD_COMPILER_STRING="$(clang --version | head -n 1 | perl -pe 's/\(http.*?\)//gs' | sed -e 's/  */ /g' -e 's/[[:space:]]*$//')"
         KBUILD_BUILD_HOST=GitHub-Action
         KBUILD_BUILD_USER=$(echo ${{ github.actor }} | tr A-Z a-z)
+
         ######################
-        cd $KERNEL_DIR/KernelSU
-        KSU_VERSION=$((10000+200+`git rev-list --count HEAD`))
-        cd $KERNEL_DIR
+        cd ${{ env.KERNEL_DIR }}
         ######################
         make CC=clang O=out ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- CROSS_COMPILE_COMPAT=arm-linux-gnueabi- NM=llvm-nm OBJDUMP=llvm-objdump STRIP=llvm-strip $KERNEL_DEFCONFIG 
         ######################
-        #sed -i "/lmperf/{s/-/-${KSU_VERSION}-/}" out/.config
-        #sed -i "/RealKing/{s/RealKing/RK-KSU/}" out/.config
-        #KERNEL_NAME=`grep "RK-KSU" out/.config | sed 's|//|-|' | awk -F\" '{print $2}'`
-        
-        echo "ZIMAGE_NAME=${DEVICE_NAME}-KSU-${KSU_VERSION}" >> $GITHUB_ENV
-        
-        
-    - name: Build Kernel
-      run: |
-        cd android-kernel
-        PATH=${{ env.CLANG_DIR }}/bin:$PATH
-        clang -v
-        SUBARCH=arm64
-        KBUILD_COMPILER_STRING="$(clang --version | head -n 1 | perl -pe 's/\(http.*?\)//gs' | sed -e 's/  */ /g' -e 's/[[:space:]]*$//')"
-        KBUILD_BUILD_HOST=GitHub-Action
-        KBUILD_BUILD_USER=$(echo ${{ github.actor }} | tr A-Z a-z)       
         make -j$(nproc --all) CC=clang O=out ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- CROSS_COMPILE_COMPAT=arm-linux-gnueabi- NM=llvm-nm OBJDUMP=llvm-objdump STRIP=llvm-strip 
-  
+        ######################
+				cd ${{ env.LOCAL_DIR }}
+	
+	
     - name: ZIP Kernel
       run: |
         TIME=$(TZ=Asia/Shanghai date "+%Y%m%d%H%M")
-        cd android-kernel
+        echo "FINAL_ZIPNAME="AliothKernel_KernelSU_${{ env.KSU_VERSION }}_${TIME}"" >> $GITHUB_ENV
+        FINAL_ZIPNAME="AliothKernel_KernelSU_${{ env.KSU_VERSION }}_${TIME}"
+
+        cd ${{ env.KERNEL_DIR }}
         mkdir -p tmp
-        cp -fp ${{ env.ZIMAGE_DIR }}/Image tmp
-        cp -fp ${{ env.ZIMAGE_DIR }}/dtbo.img tmp
+        cp -fp ${{ env.ZIMAGE_DIR }}/Image tmp/
+        cp -fp ${{ env.ZIMAGE_DIR }}/dtbo.img tmp/
         cd tmp
-        7za a -mx9 tmp.zip *
-        cd ..
+        7za a -mx9 ${FINAL_ZIPNAME}.zip *
+        cd ${{ env.LOCAL_DIR }}
 
-        echo "FINAL_ZINAME="${{ env.ZIMAGE_NAME }}-${TIME}"" >> $GITHUB_ENV
-        FINAL_ZINAME="${{ env.ZIMAGE_NAME }}-${TIME}"
-        mkdir ${{ env.KERNEL_DIR }}/image_output
-        cp -fp tmp/tmp.zip ../image_output/${FINAL_ZINAME}.zip
 
-        
-    - name: Upload Kernel Image ZIP
+    - name: Upload Kernel Image Zip
       uses: actions/upload-artifact@v3
       with:
-        name: ${{ env.FINAL_ZINAME }}
-        path: image_output/*
+        name: ${{ env.FINAL_ZIPNAME }}
+        path: ${{ env.KERNEL_DIR }}/tmp/*
         
 
     
