@@ -43,8 +43,8 @@ jobs:
       run: |
         cd android-kernel
         PATH=${{ env.CLANG_DIR }}/bin:$PATH
-        CapShift/alioth_ksu_daily/=Alioth
-        KERNEL_DEFCONFIG=vendor/alioth_defconfig
+        DEVICE_NAME=Alioth
+        KERNEL_DEFCONFIG=alioth_lmperf_defconfig
         KERNEL_DIR=`pwd`
         echo "KERNEL_DIR=${KERNEL_DIR}" >> $GITHUB_ENV
         echo "ZIMAGE_DIR="${KERNEL_DIR}/out/arch/arm64/boot"" >> $GITHUB_ENV
@@ -60,11 +60,11 @@ jobs:
         ######################
         make CC=clang O=out ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- CROSS_COMPILE_COMPAT=arm-linux-gnueabi- NM=llvm-nm OBJDUMP=llvm-objdump STRIP=llvm-strip $KERNEL_DEFCONFIG 
         ######################
-        sed -i "/lmperf/{s/-/-${KSU_VERSION}-/}" out/.config
-        sed -i "/RealKing/{s/RealKing/RK-KSU/}" out/.config
-        KERNEL_NAME=`grep "RK-KSU" out/.config | sed 's|//|-|' | awk -F\" '{print $2}'`
+        #sed -i "/lmperf/{s/-/-${KSU_VERSION}-/}" out/.config
+        #sed -i "/RealKing/{s/RealKing/RK-KSU/}" out/.config
+        #KERNEL_NAME=`grep "RK-KSU" out/.config | sed 's|//|-|' | awk -F\" '{print $2}'`
         
-        echo "ZIMAGE_NAME=${KERNEL_NAME}-${DEVICE_NAME}-MIUI-Snapshot" >> $GITHUB_ENV
+        echo "ZIMAGE_NAME=${DEVICE_NAME}-KSU-${KSU_VERSION}" >> $GITHUB_ENV
         
         
     - name: Build Kernel
@@ -72,7 +72,6 @@ jobs:
         cd android-kernel
         PATH=${{ env.CLANG_DIR }}/bin:$PATH
         clang -v
-        #MAKE="./makeparallel"
         SUBARCH=arm64
         KBUILD_COMPILER_STRING="$(clang --version | head -n 1 | perl -pe 's/\(http.*?\)//gs' | sed -e 's/  */ /g' -e 's/[[:space:]]*$//')"
         KBUILD_BUILD_HOST=GitHub-Action
@@ -81,22 +80,20 @@ jobs:
   
     - name: ZIP Kernel
       run: |
-        mkdir image_output
-        cd android-kernel
         TIME=$(TZ=Asia/Shanghai date "+%Y%m%d%H%M")
+        cd android-kernel
         mkdir -p tmp
-        cp -fp ${{ env.ZIMAGE_DIR }}/Image.gz tmp
+        cp -fp ${{ env.ZIMAGE_DIR }}/Image tmp
         cp -fp ${{ env.ZIMAGE_DIR }}/dtbo.img tmp
-        cp -rp ./anykernel/* tmp
         cd tmp
         7za a -mx9 tmp.zip *
         cd ..
+
         echo "FINAL_ZINAME="${{ env.ZIMAGE_NAME }}-${TIME}"" >> $GITHUB_ENV
         FINAL_ZINAME="${{ env.ZIMAGE_NAME }}-${TIME}"
         mkdir ${{ env.KERNEL_DIR }}/image_output
         cp -fp tmp/tmp.zip ../image_output/${FINAL_ZINAME}.zip
-        md5sum ../image_output/${FINAL_ZINAME}.zip >../image_output/${FINAL_ZINAME}.zip.md5sum
-        rm -rf out
+
         
     - name: Upload Kernel Image ZIP
       uses: actions/upload-artifact@v3
