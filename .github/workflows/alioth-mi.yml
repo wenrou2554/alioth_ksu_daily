@@ -25,7 +25,7 @@ jobs:
         echo "LOCAL_DIR=${LOCAL_DIR}" >> $GITHUB_ENV
         echo "CLANG_DIR=${LOCAL_DIR}/clang" >> $GITHUB_ENV
         echo "KERNEL_DIR=${LOCAL_DIR}/android-kernel" >> $GITHUB_ENV
-        echo "ZIMAGE_DIR=${KERNEL_DIR}/out/arch/arm64/boot" >> $GITHUB_ENV
+        echo "ZIMAGE_DIR="${LOCAL_DIR}/android-kernel/out/arch/arm64/boot"" >> $GITHUB_ENV
 
 
     - name: Setup KernelSU
