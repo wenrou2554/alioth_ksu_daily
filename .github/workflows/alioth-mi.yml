@@ -73,8 +73,8 @@ jobs:
         make -j$(nproc --all) CC=clang O=out ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- CROSS_COMPILE_COMPAT=arm-linux-gnueabi- NM=llvm-nm OBJDUMP=llvm-objdump STRIP=llvm-strip 
         ######################
         cd ${{ env.LOCAL_DIR }}
-	
-	
+
+
     - name: ZIP Kernel
       run: |
         TIME=$(TZ=Asia/Shanghai date "+%Y%m%d%H%M")
@@ -95,7 +95,3 @@ jobs:
       with:
         name: ${{ env.FINAL_ZIPNAME }}
         path: ${{ env.KERNEL_DIR }}/tmp/*
-        
-
-    
-          
