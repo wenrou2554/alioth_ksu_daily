@@ -82,11 +82,28 @@ jobs:
         FINAL_ZIPNAME="AliothKernel_KernelSU_${{ env.KSU_VERSION }}_${TIME}"
 
         cd ${{ env.KERNEL_DIR }}
+        git clone https://github.com/osm0sis/AnyKernel3
+
+        sed -i 's/do.devicecheck=1/do.devicecheck=0/g' AnyKernel3/anykernel.sh
+
+        sed -i 's!block=/dev/block/platform/omap/omap_hsmmc.0/by-name/boot;!block=auto;!g' AnyKernel3/anykernel.sh
+
+        sed -i 's/is_slot_device=0;/is_slot_device=auto;/g' AnyKernel3/anykernel.sh
+
+
+
+
+
+
+
+
+
+        rm -rf AnyKernel3/.git* AnyKernel3/README.md
         mkdir -p tmp
-        cp -fp ${{ env.ZIMAGE_DIR }}/Image tmp/
-        cp -fp ${{ env.ZIMAGE_DIR }}/dtbo.img tmp/
-        cd tmp
-        7za a -mx9 ${FINAL_ZIPNAME}.zip * -x *.zip
+        cp -fp ${{ env.ZIMAGE_DIR }}/Image AnyKernel3/
+        cp -fp ${{ env.ZIMAGE_DIR }}/dtbo.img AnyKernel3/
+        #cd tmp
+        7za a -mx9 tmp/${FINAL_ZIPNAME}.zip AnyKernel3/*
         cd ${{ env.LOCAL_DIR }}
 
 
