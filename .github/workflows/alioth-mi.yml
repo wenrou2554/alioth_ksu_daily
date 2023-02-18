@@ -14,8 +14,8 @@ jobs:
       uses: actions/checkout@v3
       with:
         github-server-url: 'https://github.com'
-        repository: Rohail33/RealKing-kernel-SM8250
-        ref: 12.1-alioth
+        repository: LeviMarvin/kernel_xiaomi_alioth
+        ref: talon
         path: android-kernel
       
     - name: Setup Build Environment
@@ -27,7 +27,7 @@ jobs:
       run: |
         mkdir clang
         cd clang
-        wget -q https://github.com/Mandi-Sa/clang/releases/download/amd64-kernel-arm-20230205/amd64-kernel-arm-20230205.7z -O clang.7z
+        wget -q https://github.com/Mandi-Sa/clang/releases/download/amd64-kernel-arm-20230213/amd64-kernel-arm-20230213.7z -O clang.7z
         7za x clang.7z
         CLANG_DIR=`pwd`
         echo "CLANG_DIR=$CLANG_DIR" >> $GITHUB_ENV
@@ -36,14 +36,14 @@ jobs:
       run: |
         cd android-kernel
         curl -LSs "https://raw.githubusercontent.com/tiann/KernelSU/main/kernel/setup.sh" | bash -
-        wget -q "https://raw.githubusercontent.com/WeeAris/RK-KSU-AOSP-Daily-Build/main/0001-Add-KernelSU-calls-to-the-kernel-source.patch" -O KernelSU.patch
+        wget -q "https://raw.githubusercontent.com/CapShift/alioth_ksu_daily/main/0001-Add-KernelSU-calls-to-the-kernel-source.patch" -O KernelSU.patch
         git apply ./KernelSU.patch
     
     - name: Generate Kernel Configuration
       run: |
         cd android-kernel
         PATH=${{ env.CLANG_DIR }}/bin:$PATH
-        DEVICE_NAME=Alioth
+        CapShift/alioth_ksu_daily/=Alioth
         KERNEL_DEFCONFIG=vendor/alioth_defconfig
         KERNEL_DIR=`pwd`
         echo "KERNEL_DIR=${KERNEL_DIR}" >> $GITHUB_ENV
@@ -58,11 +58,12 @@ jobs:
         KSU_VERSION=$((10000+200+`git rev-list --count HEAD`))
         cd $KERNEL_DIR
         ######################
-        make CC=clang O=out ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- CROSS_COMPILE_COMPAT=arm-linux-gnueabi- NM=llvm-nm  OBJDUMP=llvm-objdump STRIP=llvm-strip $KERNEL_DEFCONFIG 
+        make CC=clang O=out ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- CROSS_COMPILE_COMPAT=arm-linux-gnueabi- NM=llvm-nm OBJDUMP=llvm-objdump STRIP=llvm-strip $KERNEL_DEFCONFIG 
         ######################
-        sed -i "/RealKing/{s/-/-${KSU_VERSION}-/}" out/.config
+        sed -i "/lmperf/{s/-/-${KSU_VERSION}-/}" out/.config
         sed -i "/RealKing/{s/RealKing/RK-KSU/}" out/.config
         KERNEL_NAME=`grep "RK-KSU" out/.config | sed 's|//|-|' | awk -F\" '{print $2}'`
+        
         echo "ZIMAGE_NAME=${KERNEL_NAME}-${DEVICE_NAME}-MIUI-Snapshot" >> $GITHUB_ENV
         
         
