@@ -86,7 +86,7 @@ jobs:
         cp -fp ${{ env.ZIMAGE_DIR }}/Image tmp/
         cp -fp ${{ env.ZIMAGE_DIR }}/dtbo.img tmp/
         cd tmp
-        7za a -mx9 ${FINAL_ZIPNAME}.zip *
+        7za a -mx9 ${FINAL_ZIPNAME}.zip * -x *.zip
         cd ${{ env.LOCAL_DIR }}
 
 
