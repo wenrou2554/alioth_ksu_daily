@@ -102,8 +102,8 @@ jobs:
         mkdir -p tmp
         cp -fp ${{ env.ZIMAGE_DIR }}/Image AnyKernel3/
         cp -fp ${{ env.ZIMAGE_DIR }}/dtbo.img AnyKernel3/
-        #cd tmp
-        7za a -mx9 tmp/${FINAL_ZIPNAME}.zip AnyKernel3/*
+        cd AnyKernel3
+        7za a -mx9 ${{ env.KERNEL_DIR }}/tmp/${FINAL_ZIPNAME}.zip *
         cd ${{ env.LOCAL_DIR }}
 
 
